@@ -19,8 +19,8 @@ This guide walks you through both use cases with minimal setup.
 Before starting, ensure you have:
 
 1. **1Password Connect Server**: Self-hosted 1Password Connect server (see [1Password Connect docs](https://developer.1password.com/docs/connect/))
-2. **Service Account Token**: Generated from your 1Password Connect server
-3. **.NET 8.0 SDK** or later (or .NET 6+)
+2. **Access Token**: Generated from 1Password https://developer.1password.com/docs/connect/manage-connect#create-a-token
+3. **.NET 8.0 SDK** or later
 4. **Network Access**: Your application can reach the Connect server URL
 
 ---
@@ -345,7 +345,7 @@ Configuration provider caches secrets automatically. For programmatic access, ca
 ### ✅ DO:
 - Store authentication token in environment variables in production
 - Use HTTPS for Connect server URL (enforced by SDK)
-- Keep service account tokens secure (never commit to source control)
+- Keep access tokens secure (never commit to source control)
 - Use least-privilege access (grant service account only necessary vault permissions)
 - Monitor token expiration (tokens don't auto-refresh)
 
@@ -353,7 +353,7 @@ Configuration provider caches secrets automatically. For programmatic access, ca
 - Log secret values (SDK prevents this, but be cautious in your code)
 - Hardcode tokens in application code
 - Commit appsettings.json with tokens to source control
-- Share service account tokens across environments (dev, staging, prod)
+- Share access tokens across environments (dev, staging, prod)
 
 ---
 

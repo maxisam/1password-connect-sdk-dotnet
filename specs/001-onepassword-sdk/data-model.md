@@ -215,7 +215,7 @@ Configuration options for the 1Password Connect API client.
 public class OnePasswordClientOptions
 {
     public string ConnectServer { get; set; }   // Connect server URL (e.g., "https://localhost:8080")
-    public string Token { get; set; }           // Service account token for authentication
+    public string Token { get; set; }           // access token for authentication
     public TimeSpan Timeout { get; set; }       // HTTP request timeout (default: 10s)
     public int MaxRetries { get; set; }         // Max retry attempts (default: 3)
 }

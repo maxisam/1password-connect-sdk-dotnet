@@ -64,7 +64,7 @@ namespace OnePassword.Configuration
         /// </summary>
         /// <param name="builder">The configuration builder</param>
         /// <param name="connectServer">1Password Connect server URL (must be HTTPS)</param>
-        /// <param name="token">Service account token for authentication</param>
+        /// <param name="token">access token for authentication</param>
         /// <returns>The configuration builder for chaining</returns>
         /// <exception cref="ArgumentNullException">builder, connectServer, or token is null</exception>
         /// <exception cref="ArgumentException">connectServer is not a valid HTTPS URL</exception>

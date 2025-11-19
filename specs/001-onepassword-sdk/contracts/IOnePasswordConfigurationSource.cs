@@ -32,7 +32,7 @@ namespace OnePassword.Configuration
         public string ConnectServer { get; set; }
 
         /// <summary>
-        /// 1Password service account token for authentication.
+        /// 1Password access token for authentication.
         /// </summary>
         /// <remarks>
         /// Required. Must be kept secure (not logged or committed to source control).

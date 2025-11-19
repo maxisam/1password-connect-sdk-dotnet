@@ -35,7 +35,7 @@ namespace OnePassword.Sdk.Exceptions
     /// Corresponds to FR-008, FR-009: authentication error handling
     ///
     /// Typical causes:
-    /// - Invalid service account token
+    /// - Invalid access token
     /// - Expired token (for long-running applications)
     /// - Token revoked by administrator
     ///
@@ -58,7 +58,7 @@ namespace OnePassword.Sdk.Exceptions
     /// Corresponds to FR-031, FR-034: authorization failure handling
     ///
     /// Typical causes:
-    /// - Service account token lacks permission to access specific vault
+    /// - access token lacks permission to access specific vault
     /// - Vault permissions changed after application startup
     /// - Vault exists but is not accessible to this token
     ///
