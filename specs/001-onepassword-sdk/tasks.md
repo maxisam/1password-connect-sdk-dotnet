@@ -303,6 +303,7 @@ Tasks marked with `[P]` can be executed in parallel when their prerequisites are
   - Test: Constructor validates HTTPS URL (throw ArgumentException if HTTP)
   - Test: Constructor validates non-empty token
   - Test: Client initializes successfully with valid options
+  - Test: Verify INFO-level log emitted: "OnePasswordClient initialized with server {url}" (FR-040)
   - **Files**: `tests/OnePassword.Sdk.Tests/Client/OnePasswordClientTests.cs`
 
 - [ ] T034 [P] [US1] Unit test: Vault operations with mocked HTTP
@@ -332,6 +333,7 @@ Tasks marked with `[P]` can be executed in parallel when their prerequisites are
   - Test: Exponential backoff delays (1s, 2s, 4s) between retries
   - Test: After 3 retries, throw NetworkException with retry count
   - Test: Request timeout after 10 seconds → TimeoutException
+  - Test: Verify WARN-level log on each retry includes attempt number (e.g., "Retry attempt 2 of 3") (FR-041)
   - **Files**: `tests/OnePassword.Sdk.Tests/Internal/RetryPolicyTests.cs`
 
 - [ ] T038 [US1] Integration test: End-to-end secret retrieval (mocked API)
@@ -604,11 +606,13 @@ Tasks marked with `[P]` can be executed in parallel when their prerequisites are
 
 - [ ] T060 [P] Implement comprehensive logging throughout SDK
   - Review all OnePasswordClient methods: Add INFO logs for success, WARN for retries, ERROR for failures
-  - Include correlation IDs (use AsyncLocal or Activity for distributed tracing)
+  - Implement correlation ID tracking using AsyncLocal<string> or System.Diagnostics.Activity (FR-044)
+  - Include correlation ID in all structured log entries as "{CorrelationId}" property
+  - Generate correlation ID on client initialization; propagate through async call chain
   - Ensure no secret values logged (Field.Value, Token excluded)
   - Sanitize all error logs (no partial secrets per FR-038)
   - Per FR-039 through FR-044
-  - **Files**: `src/OnePassword.Sdk/Client/OnePasswordClient.cs`, all exception classes
+  - **Files**: `src/OnePassword.Sdk/Client/OnePasswordClient.cs`, `src/OnePassword.Sdk/Internal/CorrelationContext.cs` (new), all exception classes
 
 - [ ] T061 [P] Implement comprehensive logging in configuration provider
   - Add logging to OnePasswordConfigurationProvider: Load() lifecycle events

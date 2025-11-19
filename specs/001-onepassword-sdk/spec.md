@@ -106,8 +106,8 @@ A .NET developer needs to override 1Password secrets with environment variables 
 
 - **FR-001**: SDK MUST provide an API to authenticate with 1Password using access token and Connect server URL
 - **FR-002**: SDK MUST provide an API to list available vaults for the authenticated account
-- **FR-003**: SDK MUST provide an API to retrieve a specific item from a vault by item name or ID
-- **FR-004**: SDK MUST provide an API to extract a specific secret field value from an item by field name
+- **FR-003**: SDK MUST provide APIs to retrieve a specific item from a vault by item ID (GetItemAsync) OR by item title/name (GetItemByTitleAsync)
+- **FR-004**: SDK MUST provide APIs to extract a specific secret field value from an item by field ID or field label/name
 - **FR-005**: SDK MUST support authentication via 1Password Connect server (Connect server URL with token)
 - **FR-006**: SDK MUST read authentication configuration from both appsettings.json (OnePassword:ConnectServer, OnePassword:Token) and environment variables (OnePassword__ConnectServer, OnePassword__Token)
 - **FR-007**: SDK MUST give precedence to environment variables over appsettings.json for authentication configuration when both are present
@@ -181,7 +181,7 @@ A .NET developer needs to override 1Password secrets with environment variables 
 - **SC-001**: Developers can integrate 1Password secret retrieval into their .NET application with fewer than 10 lines of code
 - **SC-002**: Configuration containing op:// URIs is resolved to actual secrets without requiring custom code for each secret
 - **SC-003**: Application startup time increases by less than 500ms when resolving up to 20 secrets from 1Password
-- **SC-004**: 95% of developers successfully configure the SDK on their first attempt without consulting detailed documentation Validated through user testing or documentation usability study
+- **SC-004**: 95% of developers successfully configure the SDK on their first attempt without consulting detailed documentation (validated through quickstart.md walkthroughs with 10+ external developers, or deferred to user feedback on beta release)
 - **SC-005**: Secret retrieval errors provide enough context that developers can identify and fix the issue within 5 minutes
 - **SC-006**: Environment variables successfully override 1Password secrets 100% of the time when configured correctly
 - **SC-007**: The SDK handles network failures gracefully with clear error messages that indicate the root cause
