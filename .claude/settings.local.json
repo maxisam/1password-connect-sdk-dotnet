@@ -10,7 +10,9 @@
       "Bash(dotnet add package:*)",
       "Bash(dotnet add reference:*)",
       "Bash(dotnet build:*)",
-      "Bash(dotnet test:*)"
+      "Bash(dotnet test:*)",
+      "Bash(Select-String -Pattern \"error|succeeded|failed\")",
+      "Bash(Select-Object -Last 5)"
     ],
     "deny": [],
     "ask": []
