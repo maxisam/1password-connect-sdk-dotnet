@@ -12,7 +12,8 @@
       "Bash(dotnet build:*)",
       "Bash(dotnet test:*)",
       "Bash(Select-String -Pattern \"error|succeeded|failed\")",
-      "Bash(Select-Object -Last 5)"
+      "Bash(Select-Object -Last 5)",
+      "Bash(Select-String -Pattern \"error|failed|FAIL\" -Context 2)"
     ],
     "deny": [],
     "ask": []

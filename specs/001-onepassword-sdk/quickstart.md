@@ -182,15 +182,69 @@ var stripeKey = configuration["ExternalServices:Stripe:SecretKey"];
 Console.WriteLine("Configuration loaded with secrets resolved!");
 ```
 
-### Step 4: Override with Environment Variables (Optional)
+### Step 4: Override Secrets with Environment Variables
 
-For local development or testing, override secrets with environment variables:
+Environment variables automatically override 1Password secrets, making it easy to test locally or run in CI/CD without accessing production secrets.
 
-```bash
-export ConnectionStrings__Database="Server=localhost;Database=test;..."
+#### How It Works
+
+The configuration builder precedence (last added wins) means environment variables override 1Password secrets:
+
+```csharp
+var configuration = new ConfigurationBuilder()
+    .AddJsonFile("appsettings.json")      // Contains op:// URIs
+    .AddEnvironmentVariables()             // Can override with real values
+    .AddOnePassword()                      // Resolves remaining op:// URIs
+    .Build();
 ```
 
-Environment variables take precedence over 1Password secrets.
+**Important**: Add `AddEnvironmentVariables()` **before** `AddOnePassword()` to enable overrides.
+
+#### Example: Local Development Override
+
+**appsettings.json** (committed to source control):
+```json
+{
+  "ConnectionStrings": {
+    "Database": "op://production/database/connection_string"
+  },
+  "ExternalServices": {
+    "Stripe": {
+      "SecretKey": "op://production/api-keys/stripe/secret_key"
+    }
+  }
+}
+```
+
+**Local environment variables** (your machine only):
+```bash
+# Override production database with local test database
+export ConnectionStrings__Database="Server=localhost;Database=test;User=test;Password=test"
+
+# Override production Stripe key with test key
+export ExternalServices__Stripe__SecretKey="sk_test_12345"
+```
+
+When you run the application locally:
+- `ConnectionStrings:Database` returns your local database connection (from env var, **not** from 1Password)
+- `ExternalServices:Stripe:SecretKey` returns your test Stripe key (from env var, **not** from 1Password)
+
+No changes to code required! The 1Password provider automatically skips resolving op:// URIs that have been overridden by environment variables.
+
+#### Example: CI/CD Override
+
+In your CI/CD pipeline, override secrets for integration tests:
+
+**GitHub Actions example**:
+```yaml
+- name: Run integration tests
+  run: dotnet test
+  env:
+    ConnectionStrings__Database: "Server=testdb;Database=ci_test;..."
+    ExternalServices__Stripe__SecretKey: "sk_test_ci_12345"
+```
+
+The application runs normally without accessing production 1Password secrets.
 
 **Complete Example**: See [examples/configuration-integration](../examples/configuration-integration)
 

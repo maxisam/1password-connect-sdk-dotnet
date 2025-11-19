@@ -52,9 +52,13 @@ public class OnePasswordConfigurationSource : IConfigurationSource
     /// Called by Microsoft.Extensions.Configuration infrastructure during
     /// configuration building. Creates provider that will scan and resolve
     /// op:// URIs when Load() is called.
+    ///
+    /// The builder is passed to the provider so it can scan all previous
+    /// configuration sources for op:// URIs while respecting precedence
+    /// (FR-024: environment variables override secrets).
     /// </remarks>
     public IConfigurationProvider Build(IConfigurationBuilder builder)
     {
-        return new OnePasswordConfigurationProvider(this);
+        return new OnePasswordConfigurationProvider(this, builder);
     }
 }
