@@ -3,7 +3,7 @@
 **Feature Branch**: `001-onepassword-sdk`
 **Created**: 2025-11-17
 **Status**: Draft
-**Input**: User description: "Build SDK for .NET applications to access 1Password vaults and also provide helper function to integrate with configuration builder, so when there is a configuration with value starting with  "op://" like op://vaults/<vault-name>/items/<item-name>#secret-name, it will replace the value with the real secret from 1password. The process should happen in the end of configuration building so it can go through every configuration value, and it can only be override by environment variables. User should provide necessary authentication info in "appsettings.json" or Environment variable to access 1password vaults."
+**Input**: User description: "Build SDK for .NET applications to access 1Password vaults and also provide helper function to integrate with configuration builder, so when there is a configuration with value starting with "op://" like op://<vault>/<item>/<field>, it will replace the value with the real secret from 1password. The process should happen in the end of configuration building so it can go through every configuration value, and it can only be override by environment variables. User should provide necessary authentication info in "appsettings.json" or Environment variable to access 1password vaults."
 
 ## Clarifications
 
@@ -19,7 +19,13 @@
 
 ### User Story 1 - Programmatic Vault Access (Priority: P1)
 
-A .NET developer needs to retrieve secrets from 1Password vaults programmatically within their application code. They want a simple, type-safe API to authenticate with 1Password and retrieve specific secrets without manual copy-paste or hardcoding credentials. The APIs should be similar to the official 1Password SDK for python. https://developer.1password.com/docs/sdks
+A .NET developer needs to retrieve secrets from 1Password vaults through the [connect server ](https://developer.1password.com/docs/connect/) programmatically within their application code. They want a simple, type-safe API to authenticate with 1Password and retrieve specific secrets without manual copy-paste or hardcoding credentials. 
+
+The APIs should be similar to the official 1Password connect SDK for python or javascript. In fact, porting that SDK to .NET would be ideal. 
+
+Here is javascript sdk repository for reference: https://github.com/1Password/connect-sdk-js
+
+for python sdk repository: https://github.com/1Password/connect-sdk-python
 
 **Why this priority**: This is the foundation of the SDK. Without the ability to programmatically access vaults and retrieve secrets, no other functionality is possible. This delivers immediate value as a standalone library for secure secret management.
 
@@ -38,13 +44,15 @@ A .NET developer needs to retrieve secrets from 1Password vaults programmaticall
 
 A .NET developer building an ASP.NET application wants to store sensitive configuration values (database passwords, API keys) in 1Password and reference them in "appsettings.json" using "op://" URIs. The application should automatically resolve these URIs to actual secrets during startup without requiring manual code for each secret.
 
+URI format: `op://<vault-name>/<item-name>/<field-name>` , following the official 1Password secret reference syntax (https://developer.1password.com/docs/cli/secret-reference-syntax
+
 **Why this priority**: This is the key differentiator of this SDK. It enables the "pit of success" pattern where developers can manage secrets in 1Password and seamlessly integrate them into the standard .NET configuration system. This delivers significant value by eliminating boilerplate secret-loading code.
 
 **Independent Test**: Can be fully tested by creating a configuration file (appsettings.json) with op:// URI values, adding the 1Password configuration provider to the configuration builder, and verifying that when the application reads configuration values, it receives the actual secrets from 1Password instead of the op:// URIs.
 
 **Acceptance Scenarios**:
 
-1. **Given** an appsettings.json file contains a value like "op://vaults/prod/items/database#password", **When** the application configures the 1Password provider and builds configuration, **Then** reading the configuration key returns the actual password from 1Password
+1. **Given** an appsettings.json file contains a value like `op://prod/database/password`, **When** the application configures the 1Password provider and builds configuration, **Then** reading the configuration key returns the actual password from 1Password
 2. **Given** multiple configuration values reference different 1Password secrets, **When** configuration is built, **Then** all op:// URIs are resolved to their respective secrets in a single batch API call
 3. **Given** a configuration value does not start with "op://", **When** configuration is built with the 1Password provider, **Then** the value is left unchanged
 4. **Given** an op:// URI references a non-existent vault, item, or secret field, **When** configuration is built, **Then** the provider throws a clear error identifying which reference failed
@@ -62,7 +70,7 @@ A .NET developer needs to override 1Password secrets with environment variables 
 
 **Acceptance Scenarios**:
 
-1. **Given** a configuration key "DatabasePassword" has value "op://vaults/prod/items/db#password" and an environment variable "DatabasePassword=local-test-password" exists, **When** configuration is built with both sources, **Then** the environment variable value "local-test-password" is used
+1. **Given** a configuration key "DatabasePassword" has value `op://prod/database/password` and an environment variable "DatabasePassword=local-test-password" exists, **When** configuration is built with both sources, **Then** the environment variable value "local-test-password" is used
 2. **Given** environment variables are configured to load before the 1Password provider, **When** configuration is built, **Then** environment variables take precedence over op:// resolved secrets
 3. **Given** no environment variable exists for a configuration key with an op:// URI, **When** configuration is built, **Then** the 1Password secret is used as expected
 
@@ -99,7 +107,7 @@ A .NET developer needs to override 1Password secrets with environment variables 
 
 - **FR-010**: SDK MUST provide a configuration provider that integrates with Microsoft.Extensions.Configuration
 - **FR-011**: Configuration provider MUST recognize configuration values starting with "op://" as 1Password secret references
-- **FR-012**: Configuration provider MUST parse op:// URIs in the format "op://vaults/<vault-name>/items/<item-name>#<secret-field-name>"
+- **FR-012**: Configuration provider MUST parse op:// URIs in the format `op://<vault-name>/<item-name>/<field-name>` per official 1Password secret reference syntax (https://developer.1password.com/docs/cli/secret-reference-syntax/)
 - **FR-013**: Configuration provider MUST resolve op:// URIs to actual secret values from 1Password during configuration building
 - **FR-014**: Configuration provider MUST process all configuration keys and values to identify op:// URIs (not just top-level values)
 - **FR-015**: Configuration provider MUST execute secret resolution after all other configuration sources are loaded
@@ -135,7 +143,7 @@ A .NET developer needs to override 1Password secrets with environment variables 
 - **Vault**: A secure container in 1Password that holds multiple items. Identified by name or unique ID. Users must have permission to access a vault.
 - **Item**: An individual entry within a vault that contains one or more secret fields. Identified by name or unique ID within the context of a vault.
 - **Secret Field**: A specific field within an item that holds a secret value (e.g., password, API key, connection string). Identified by field name.
-- **op:// URI**: A special URI format used in configuration to reference 1Password secrets. Format: `op://vaults/<vault-name>/items/<item-name>#<secret-field-name>`. Components must be URL-encoded if they contain special characters.
+- **op:// URI**: A special URI format used in configuration to reference 1Password secrets. Format: `op://<vault>/<item>/<field>` with optional section `op://<vault>/<item>/<section>/<field>`. Components must be URL-encoded if they contain special characters. Conforms to official 1Password secret reference syntax (https://developer.1password.com/docs/cli/secret-reference-syntax/).
 - **Configuration Source**: A source of configuration data (appsettings.json, environment variables, command line arguments) that participates in the .NET configuration builder system.
 - **Connect Server**: A self-hosted 1Password Connect server that provides API access to 1Password vaults. The SDK authenticates to this server using a Connect server URL and access token.
 - **Authentication Configuration**: SDK reads authentication settings from configuration with keys `OnePassword:ConnectServer` (server URL) and `OnePassword:Token` (access token) in appsettings.json, or `OnePassword__ConnectServer` and `OnePassword__Token` as environment variables. Environment variables take precedence.
@@ -161,7 +169,7 @@ A .NET developer needs to override 1Password secrets with environment variables 
 - 1Password vault and item names are known in advance and referenced correctly in op:// URIs
 - Authentication configuration (Connect server URL and token) is provided via appsettings.json or environment variables (OnePassword__ConnectServer, OnePassword__Token)
 - Authentication tokens in appsettings.json are protected appropriately (e.g., not committed to source control, encrypted at rest)
-- The target .NET version is .NET 6.0 or later (for modern configuration builder support)
+- The target .NET version is .NET 8.0 or later (for modern configuration builder support)
 - Secret values are text-based and can be represented as strings (not binary data)
 - Configuration is built once at application startup (not dynamically rebuilt during runtime)
 
