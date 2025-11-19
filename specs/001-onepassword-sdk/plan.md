@@ -16,11 +16,11 @@ Build a .NET SDK library for programmatic access to 1Password vaults via the Con
 - Microsoft.Extensions.Configuration.Abstractions (configuration provider integration)
 - Microsoft.Extensions.Logging.Abstractions (structured logging)
 - System.Net.Http (1Password Connect API client)
-- NEEDS CLARIFICATION: JSON serialization library (System.Text.Json vs Newtonsoft.Json)
-- NEEDS CLARIFICATION: HTTP client resilience patterns (Polly for retry/timeout, or manual implementation)
+- JSON serialization library: System.Text.Json 
+- HTTP client resilience patterns: Polly for retry/timeout
 
 **Storage**: N/A (in-memory secret caching only, no persistent storage)
-**Testing**: xUnit or NUnit (NEEDS CLARIFICATION on preference), with Moq or NSubstitute for mocking
+**Testing**: xUnit with Moq for mocking and autofixture for test data generation
 **Target Platform**: Cross-platform .NET (Linux, Windows, macOS)
 **Project Type**: Single library project with multiple packages (core SDK + configuration provider extension)
 **Performance Goals**:
