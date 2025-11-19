@@ -7,6 +7,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using OnePassword.Sdk.Exceptions;
+using OnePassword.Sdk.Internal;
 using OnePassword.Sdk.Models;
 using Polly;
 using Polly.Extensions.Http;
@@ -40,7 +41,8 @@ public class OnePasswordClient : IOnePasswordClient
         // Create HTTP client with Polly retry and timeout policies
         _httpClient = CreateHttpClient();
 
-        _logger.LogInformation("OnePasswordClient initialized with server {ConnectServer}", _options.ConnectServer);
+        _logger.LogInformation("OnePasswordClient initialized with server {ConnectServer} [CorrelationId: {CorrelationId}]",
+            _options.ConnectServer, CorrelationContext.GetCorrelationId());
     }
 
     #region Vault Operations
@@ -385,6 +387,8 @@ public class OnePasswordClient : IOnePasswordClient
         }
 
         // All retries exhausted
+        _logger.LogError(lastException, "Request failed after {RetryCount} retries [CorrelationId: {CorrelationId}]",
+            retryCount, CorrelationContext.GetCorrelationId());
         throw new NetworkException("Request failed after retries", lastException!, retryCount);
     }
 

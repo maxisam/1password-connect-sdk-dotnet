@@ -1,10 +1,13 @@
 // Implementation: OnePasswordConfigurationProvider
 // Feature: 001-onepassword-sdk
 
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OnePassword.Sdk.Client;
 using OnePassword.Sdk.Exceptions;
-using System.Collections.Concurrent;
 
 namespace OnePassword.Configuration;
 
@@ -20,21 +23,27 @@ internal class OnePasswordConfigurationProvider : ConfigurationProvider, IDispos
 {
     private readonly OnePasswordConfigurationSource _source;
     private readonly IConfigurationBuilder _builder;
+    private readonly ILogger _logger;
     private readonly ConcurrentDictionary<string, string> _secretCache = new();
     private IOnePasswordClient? _client;
     private bool _disposed;
 
-    public OnePasswordConfigurationProvider(OnePasswordConfigurationSource source, IConfigurationBuilder builder)
+    public OnePasswordConfigurationProvider(OnePasswordConfigurationSource source, IConfigurationBuilder builder, ILogger? logger = null)
     {
         _source = source ?? throw new ArgumentNullException(nameof(source));
         _builder = builder ?? throw new ArgumentNullException(nameof(builder));
+        _logger = logger ?? NullLogger.Instance;
     }
 
     public override void Load()
     {
+        var stopwatch = Stopwatch.StartNew();
+        _logger.LogInformation("OnePasswordConfigurationProvider loading...");
+
         // Validate that we have credentials
         if (string.IsNullOrWhiteSpace(_source.ConnectServer))
         {
+            _logger.LogError("OnePassword:ConnectServer not configured");
             throw new InvalidOperationException(
                 "OnePassword:ConnectServer not configured. " +
                 "Add it to appsettings.json or set OnePassword__ConnectServer environment variable.");
@@ -42,6 +51,7 @@ internal class OnePasswordConfigurationProvider : ConfigurationProvider, IDispos
 
         if (string.IsNullOrWhiteSpace(_source.Token))
         {
+            _logger.LogError("OnePassword:Token not configured");
             throw new InvalidOperationException(
                 "OnePassword:Token not configured. " +
                 "Add it to appsettings.json or set OnePassword__Token environment variable.");
@@ -60,18 +70,25 @@ internal class OnePasswordConfigurationProvider : ConfigurationProvider, IDispos
         {
             // Scan all previous configuration sources for op:// URIs
             // This respects precedence: environment variables override op:// URIs (FR-024)
+            _logger.LogDebug("Scanning configuration for op:// URIs...");
             var opUris = ScanForOpUris();
 
             if (opUris.Count == 0)
             {
                 // No op:// URIs found, nothing to resolve
+                _logger.LogInformation("No op:// URIs found in configuration");
+                stopwatch.Stop();
                 return;
             }
 
+            _logger.LogInformation("Found {Count} op:// URIs to resolve", opUris.Count);
+
             // Batch retrieve all secrets
+            _logger.LogDebug("Batch retrieving {Count} secrets from 1Password...", opUris.Count);
             var resolvedSecrets = _client.GetSecretsAsync(opUris.Values).GetAwaiter().GetResult();
 
             // Cache resolved secrets and add to Data
+            var resolvedCount = 0;
             foreach (var kvp in opUris)
             {
                 var configKey = kvp.Key;
@@ -82,16 +99,27 @@ internal class OnePasswordConfigurationProvider : ConfigurationProvider, IDispos
                     _secretCache[configKey] = secretValue;
                     // Add to Data dictionary so this provider can serve the resolved value
                     Data[configKey] = secretValue;
+                    resolvedCount++;
                 }
             }
+
+            stopwatch.Stop();
+            _logger.LogInformation("Successfully resolved {ResolvedCount} of {TotalCount} secrets in {Duration}ms",
+                resolvedCount, opUris.Count, stopwatch.ElapsedMilliseconds);
         }
         catch (Exception ex) when (ex is OnePasswordException)
         {
+            stopwatch.Stop();
+            _logger.LogError(ex, "Failed to load secrets from 1Password after {Duration}ms",
+                stopwatch.ElapsedMilliseconds);
             // Re-throw 1Password-specific exceptions as-is (already have context)
             throw;
         }
         catch (Exception ex)
         {
+            stopwatch.Stop();
+            _logger.LogError(ex, "Unexpected error loading secrets from 1Password after {Duration}ms",
+                stopwatch.ElapsedMilliseconds);
             throw new OnePasswordException(
                 "Failed to load secrets from 1Password Connect API. " +
                 "Ensure ConnectServer is accessible and Token is valid.", ex);

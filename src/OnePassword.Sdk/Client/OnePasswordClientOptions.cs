@@ -1,6 +1,8 @@
 // Configuration: OnePassword Client Options
 // Feature: 001-onepassword-sdk
 
+using Microsoft.Extensions.Logging;
+
 namespace OnePassword.Sdk.Client;
 
 /// <summary>
@@ -46,6 +48,16 @@ public class OnePasswordClientOptions
     /// Must be greater than or equal to 0.
     /// </remarks>
     public int MaxRetries { get; set; } = 3;
+
+    /// <summary>
+    /// Gets or sets the logger instance for structured logging (optional).
+    /// </summary>
+    /// <remarks>
+    /// If provided, the client will log all operations with correlation IDs (FR-039 through FR-044).
+    /// Logs include: INFO for successful operations, WARN for retries, ERROR for failures.
+    /// Security: Logs never contain secret values or tokens (FR-036, FR-038).
+    /// </remarks>
+    public ILogger<OnePasswordClient>? Logger { get; set; }
 
     /// <summary>
     /// Validates the options and throws an exception if any are invalid.
