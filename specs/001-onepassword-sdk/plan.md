@@ -11,7 +11,7 @@ Build a .NET SDK library for programmatic access to 1Password vaults via the Con
 
 ## Technical Context
 
-**Language/Version**: C# / .NET 8.0 (with support for .NET 6+)
+**Language/Version**: C# / .NET 8.0 
 **Primary Dependencies**:
 - Microsoft.Extensions.Configuration.Abstractions (configuration provider integration)
 - Microsoft.Extensions.Logging.Abstractions (structured logging)
