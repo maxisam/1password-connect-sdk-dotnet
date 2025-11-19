@@ -15,6 +15,14 @@
 - Q: What should the configuration structure look like for 1Password authentication credentials? → A: Support both appsettings.json (OnePassword:ConnectServer, OnePassword:Token) and environment variables (OnePassword__ConnectServer, OnePassword__Token), with environment variables taking precedence
 - Q: When should malformed op:// URIs be detected and how should they be handled? → A: Validate URI syntax during configuration building, fail immediately if malformed (before attempting retrieval)
 
+### Session 2025-11-18
+
+- Q: How should the SDK handle authentication token expiration during long-running applications (after successful startup)? → A: Cache secrets at startup so token expiration doesn't affect already-loaded configuration (programmatic API calls fail with expiration error)
+- Q: What level of observability (logging, metrics, tracing) should the SDK provide for production environments? → A: Minimal structured logging only (INFO: startup/auth success, WARN: retries, ERROR: failures) using standard .NET ILogger interface
+- Q: How should the SDK handle vault permission changes after the application has started successfully? → A: Cached configuration secrets remain accessible; new programmatic API calls fail immediately with a clear "access denied" error if permissions revoked
+- Q: What scalability limits should the SDK enforce for secret retrieval operations? → A: Max 100 secrets per batch, max 1MB per secret value, 10-second total timeout for batch retrieval
+- Q: How should the SDK handle circular references in configuration when op:// URIs are involved? → A: Rely on .NET configuration system to detect circular references before the 1Password provider executes (no special handling needed)
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Programmatic Vault Access (Priority: P1)
@@ -83,9 +91,12 @@ A .NET developer needs to override 1Password secrets with environment variables 
 - **Same op:// URI referenced multiple times**: URI is only fetched once in the batch call; resolved value is reused for all references
 - **Malformed op:// URIs (invalid syntax, missing components)**: SDK validates all op:// URI syntax during configuration building and fails immediately with a clear error indicating which URI is malformed and why, before attempting any secret retrieval
 - **1Password item exists but requested secret field name doesn't exist**: SDK throws a clear error during secret retrieval identifying the vault, item, and missing field name
-- What happens when authentication token expiration during long-running applications?
-- What happens when vault permissions change after the application starts?
-- How are circular references in configuration handled if they involve op:// URIs?
+- **Authentication token expiration during long-running applications**: Configuration provider caches all resolved secrets at startup, so token expiration does not affect already-loaded configuration values. Programmatic API calls using the SDK after token expiration will fail with a clear "token expired" error message.
+- **Vault permission changes after application startup**: Cached configuration secrets remain accessible even if vault permissions are revoked after startup. New programmatic API calls (vault access, item retrieval) will fail immediately with a clear "access denied" error if permissions have been revoked.
+- **Exceeding batch size limit (>100 secrets)**: Configuration provider will fail with a clear error during configuration building indicating that the maximum of 100 secrets per batch has been exceeded, along with the actual count detected
+- **Secret value exceeding size limit (>1MB)**: SDK will fail with a clear error indicating which secret (vault/item/field) exceeded the 1MB size limit and the actual size
+- **Batch retrieval timeout (>10 seconds)**: SDK will fail with a timeout error if batch secret retrieval exceeds 10 seconds (excluding retry backoff time), indicating the operation that timed out
+- **Circular references in configuration involving op:// URIs**: The .NET configuration system detects and prevents circular references during the configuration building process before the 1Password provider executes secret resolution. No special handling is required by the SDK.
 
 ## Requirements *(mandatory)*
 
@@ -115,28 +126,43 @@ A .NET developer needs to override 1Password secrets with environment variables 
 - **FR-017**: Configuration provider MUST NOT modify configuration values that don't start with "op://"
 - **FR-018**: Configuration provider MUST collect all op:// URIs and retrieve secrets using a single batch API call to 1Password (not individual calls per secret)
 - **FR-019**: Configuration provider MUST deduplicate op:// URIs so each unique secret is fetched only once, even if referenced multiple times
+- **FR-020**: Configuration provider MUST cache all resolved secret values at startup so that authentication token expiration does not affect already-loaded configuration
+- **FR-021**: SDK programmatic API calls (vault access, item retrieval) MUST fail with a clear "token expired" error when attempted with an expired authentication token
+- **FR-022**: Configuration provider MUST enforce a maximum of 100 secrets per batch retrieval operation and fail with a clear error if exceeded
+- **FR-023**: SDK MUST enforce a maximum of 1MB per individual secret value and fail with a clear error if a secret exceeds this limit
+- **FR-024**: SDK MUST enforce a 10-second total timeout for batch secret retrieval operations (excluding retries) and fail with a timeout error if exceeded
 
 **Environment Variable Override:**
 
-- **FR-020**: Configuration provider MUST respect the standard .NET configuration precedence order
-- **FR-021**: Environment variables added to the configuration builder MUST override op:// resolved secrets when both are present for the same key
-- **FR-022**: Configuration provider MUST only resolve op:// URIs if no higher-precedence configuration source has already provided a value for that key
+- **FR-025**: Configuration provider MUST respect the standard .NET configuration precedence order
+- **FR-026**: Environment variables added to the configuration builder MUST override op:// resolved secrets when both are present for the same key
+- **FR-027**: Configuration provider MUST only resolve op:// URIs if no higher-precedence configuration source has already provided a value for that key
 
 **Error Handling:**
 
-- **FR-023**: SDK MUST throw specific exceptions for different error types (authentication failure, vault not found, item not found, field not found, network error, malformed URI)
-- **FR-024**: SDK MUST include the context in error messages (which vault, item, or field caused the error)
-- **FR-025**: Configuration provider MUST treat all op:// URIs as required and fail fast during configuration building if any secret cannot be retrieved (no optional secrets or default values supported)
-- **FR-026**: SDK MUST validate all op:// URI syntax during configuration building (before attempting secret retrieval) and fail immediately if any URI is malformed
-- **FR-027**: SDK MUST provide clear error messages for malformed URIs indicating which configuration key contains the invalid URI, what is wrong with the syntax, and the expected format
-- **FR-028**: SDK MUST retry transient network failures up to 3 times with exponential backoff (e.g., 1s, 2s, 4s) before throwing a network error exception
+- **FR-028**: SDK MUST throw specific exceptions for different error types (authentication failure, vault not found, item not found, field not found, network error, malformed URI, token expiration, access denied, batch size exceeded, secret size exceeded, timeout)
+- **FR-029**: SDK MUST include the context in error messages (which vault, item, or field caused the error)
+- **FR-030**: Configuration provider MUST treat all op:// URIs as required and fail fast during configuration building if any secret cannot be retrieved (no optional secrets or default values supported)
+- **FR-031**: SDK MUST validate all op:// URI syntax during configuration building (before attempting secret retrieval) and fail immediately if any URI is malformed
+- **FR-032**: SDK MUST provide clear error messages for malformed URIs indicating which configuration key contains the invalid URI, what is wrong with the syntax, and the expected format
+- **FR-033**: SDK MUST retry transient network failures up to 3 times with exponential backoff (e.g., 1s, 2s, 4s) before throwing a network error exception
+- **FR-034**: SDK programmatic API calls MUST fail immediately with a clear "access denied" error when vault permissions have been revoked (no retry attempts for authorization failures)
 
 **Security:**
 
-- **FR-029**: SDK MUST NOT log, cache, or persist retrieved secret values in plaintext
-- **FR-030**: SDK MUST securely handle authentication tokens and ensure they are not exposed in logs or error messages
-- **FR-031**: SDK MUST use secure communication channels (HTTPS) for all 1Password API interactions
-- **FR-032**: Configuration provider MUST sanitize error messages to prevent leaking partial secret values
+- **FR-035**: SDK MUST NOT log or persist retrieved secret values to disk in plaintext (in-memory caching for configuration is permitted)
+- **FR-036**: SDK MUST securely handle authentication tokens and ensure they are not exposed in logs or error messages
+- **FR-037**: SDK MUST use secure communication channels (HTTPS) for all 1Password API interactions
+- **FR-038**: Configuration provider MUST sanitize error messages to prevent leaking partial secret values
+
+**Observability:**
+
+- **FR-039**: SDK MUST integrate with the standard .NET ILogger interface for structured logging
+- **FR-040**: SDK MUST log at INFO level for successful authentication and configuration provider initialization
+- **FR-041**: SDK MUST log at WARN level for retry attempts (network failures, transient errors) including which operation is being retried
+- **FR-042**: SDK MUST log at ERROR level for all operation failures (authentication failure, vault/item/field not found, network errors, malformed URIs, token expiration, access denied, limit exceeded, timeout) with sufficient context for diagnosis
+- **FR-043**: SDK logging MUST NOT include secret values, authentication tokens, or any sensitive data in any log level
+- **FR-044**: SDK logging MUST include correlation identifiers where applicable to trace operations across components
 
 ### Key Entities *(include if feature involves data)*
 
@@ -172,6 +198,9 @@ A .NET developer needs to override 1Password secrets with environment variables 
 - The target .NET version is .NET 8.0 or later (for modern configuration builder support)
 - Secret values are text-based and can be represented as strings (not binary data)
 - Configuration is built once at application startup (not dynamically rebuilt during runtime)
+- Applications require no more than 100 secrets during configuration building
+- Individual secret values do not exceed 1MB in size
+- Network latency to 1Password Connect server allows batch retrieval to complete within 10 seconds under normal conditions
 
 ## Out of Scope
 
