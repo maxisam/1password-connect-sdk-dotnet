@@ -2,7 +2,14 @@
   "permissions": {
     "allow": [
       "Bash(git fetch:*)",
-      "Bash(pwsh:*)"
+      "Bash(pwsh:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(dotnet new:*)",
+      "Bash(dotnet sln:*)",
+      "Bash(dotnet add:*)",
+      "Bash(dotnet add package:*)",
+      "Bash(dotnet add reference:*)",
+      "Bash(dotnet build:*)"
     ],
     "deny": [],
     "ask": []

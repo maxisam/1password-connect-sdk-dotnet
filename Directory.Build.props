@@ -1,0 +1,26 @@
+<Project>
+  <PropertyGroup>
+    <!-- Enable nullable reference types for all projects -->
+    <Nullable>enable</Nullable>
+
+    <!-- Treat warnings as errors in Release builds -->
+    <TreatWarningsAsErrors Condition="'$(Configuration)' == 'Release'">true</TreatWarningsAsErrors>
+
+    <!-- Common version information -->
+    <Version>1.0.0-beta1</Version>
+    <Authors>1Password .NET SDK Contributors</Authors>
+    <Company>Open Source</Company>
+    <Copyright>Copyright © 2025</Copyright>
+
+    <!-- Common NuGet package metadata -->
+    <PackageProjectUrl>https://github.com/maxisam/dotnet-1password</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/maxisam/dotnet-1password</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageTags>1password;secrets;configuration;dotnet;sdk</PackageTags>
+
+    <!-- Code analysis -->
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+</Project>
