@@ -1,28 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git fetch:*)",
-      "Bash(pwsh:*)",
-      "Bash(git rev-parse:*)",
-      "Bash(dotnet new:*)",
-      "Bash(dotnet sln:*)",
-      "Bash(dotnet add:*)",
-      "Bash(dotnet add package:*)",
-      "Bash(dotnet add reference:*)",
-      "Bash(dotnet build:*)",
-      "Bash(dotnet test:*)",
-      "Bash(Select-String -Pattern \"error|succeeded|failed\")",
-      "Bash(Select-Object -Last 5)",
-      "Bash(Select-String -Pattern \"error|failed|FAIL\" -Context 2)",
-      "Bash(Select-String -Pattern \"CS1591|warning\")",
-      "Bash(Select-Object -First 30)",
-      "Bash(dotnet tool install:*)",
-      "Bash(dotnet run:*)",
-      "Bash(timeout /t 2)",
-      "Bash(nul)",
-      "Bash(Select-String -Pattern \"error|succeeded|failed\" -Context 2)",
-      "Bash(Select-String -Pattern 'refs/heads/[0-9]+-httpclient-factory-polly$')",
-      "Bash(Select-String -Pattern '^[* ]*[0-9]+-httpclient-factory-polly$')"
+      "Bash($null)"
     ],
     "deny": [],
     "ask": []

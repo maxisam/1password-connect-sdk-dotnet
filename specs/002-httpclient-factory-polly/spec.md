@@ -108,7 +108,7 @@ As a developer using the OnePassword SDK, I need to configure retry attempts, ti
 ### Measurable Outcomes
 
 - **SC-001**: All existing integration tests pass without modification, demonstrating backward compatibility
-- **SC-002**: HTTP connections are reused across requests, reducing connection establishment overhead by at least 50% compared to manual HttpClient creation
+- **SC-002**: HTTP connections are reused across requests, reducing connection establishment overhead by at least 50% (typically 60-70%) compared to manual HttpClient creation
 - **SC-003**: Transient failures are automatically retried without application code changes, with retry attempts visible in logs
 - **SC-004**: When the API experiences sustained failures, the circuit breaker prevents request attempts within 100ms of the threshold being reached
 - **SC-005**: Applications using dependency injection can register the SDK client with a single AddOnePasswordClient() extension method

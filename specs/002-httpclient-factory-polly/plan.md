@@ -7,15 +7,14 @@
 
 ## Summary
 
-Refactor the OnePassword SDK's HttpClient instantiation to use IHttpClientFactory with Polly-based resilience policies (retry with exponential backoff, circuit breaker). This eliminates manual retry logic in SendRequestAsync, improves connection pooling, and provides production-grade fault tolerance while maintaining backward compatibility with existing public APIs.
+Refactor the OnePassword SDK's HttpClient instantiation to use IHttpClientFactory with resilience policies (retry with exponential backoff, circuit breaker). This eliminates manual retry logic in SendRequestAsync, improves connection pooling, and provides production-grade fault tolerance while maintaining backward compatibility with existing public APIs.
 
 ## Technical Context
 
 **Language/Version**: C# / .NET 8.0 (multi-target: net8.0)
 **Primary Dependencies**:
 - Microsoft.Extensions.Http (IHttpClientFactory)
-- Polly 8.4.2 (already in csproj)
-- Polly.Extensions.Http 3.0.0 (already in csproj)
+- Microsoft.Extensions.Http.Resilience (https://learn.microsoft.com/en-us/dotnet/core/resilience/?tabs=dotnet-cli)
 - Microsoft.Extensions.Logging.Abstractions 8.0.0 (already in csproj)
 - Microsoft.Extensions.DependencyInjection.Abstractions (for IServiceCollection extensions)
 
@@ -41,7 +40,7 @@ Refactor the OnePassword SDK's HttpClient instantiation to use IHttpClientFactor
 
 ### Security-First Development (Principle I)
 
-✅ **PASS** - This refactoring does not change secret handling logic. Polly policies operate on HTTP requests/responses without inspecting or logging sensitive payloads. Existing secure communication (HTTPS, token handling) remains unchanged.
+✅ **PASS** - This refactoring does not change secret handling logic. Resilience policies operate on HTTP requests/responses without inspecting or logging sensitive payloads. Existing secure communication (HTTPS, token handling) remains unchanged.
 
 **Verification**:
 - FR-009 explicitly requires log sanitization (Warning/Info/Debug levels, no secrets)
@@ -57,7 +56,7 @@ Refactor the OnePassword SDK's HttpClient instantiation to use IHttpClientFactor
 **Verification**:
 - FR-012 requires IServiceCollection support for DI consumers
 - FR-006 preserves existing constructor-based instantiation
-- Polly and Microsoft.Extensions.Http are industry-standard, well-maintained dependencies
+- Microsoft.Extensions.Http.Resilience (https://learn.microsoft.com/en-us/dotnet/core/resilience/?tabs=dotnet-cli) and Microsoft.Extensions.Http are industry-standard, well-maintained dependencies
 
 ### API Simplicity & Developer Experience (Principle III)
 
@@ -91,7 +90,7 @@ Refactor the OnePassword SDK's HttpClient instantiation to use IHttpClientFactor
 
 **Verification**:
 - Existing CorrelationContext.GetCorrelationId() pattern continues
-- Polly policies support telemetry hooks for monitoring integration
+- Resilience policies support telemetry hooks for monitoring integration
 - Log output must be sanitized (no secrets)
 
 ### Compliance Summary
@@ -105,7 +104,7 @@ Refactor the OnePassword SDK's HttpClient instantiation to use IHttpClientFactor
 ```text
 specs/002-httpclient-factory-polly/
 ├── plan.md              # This file (/speckit.plan command output)
-├── research.md          # Phase 0 output (Polly v8 patterns, HttpClientFactory best practices)
+├── research.md          # Phase 0 output (Microsoft.Extensions.Http.Resilience   patterns, HttpClientFactory best practices)
 ├── data-model.md        # Phase 1 output (resilience policy configuration model)
 ├── quickstart.md        # Phase 1 output (developer migration guide)
 ├── contracts/           # Phase 1 output (resilience policy interfaces, configuration contracts)
@@ -123,7 +122,7 @@ src/
 │   │   └── OnePasswordClientOptions.cs   # MODIFIED: Add circuit breaker config properties (FR-014)
 │   ├── Extensions/
 │   │   └── ServiceCollectionExtensions.cs # NEW: AddOnePasswordClient() DI registration (FR-012)
-│   ├── Resilience/                        # NEW: Polly policy configuration
+│   ├── Resilience/                        # NEW: Resilience policy configuration
 │   │   ├── ResiliencePolicyBuilder.cs     # NEW: Builds retry + circuit breaker policies
 │   │   ├── PollyHttpClientBuilderExtensions.cs # NEW: Configure named HttpClient with policies
 │   │   └── TransientErrorDetector.cs      # NEW: Implements FR-005 (transient vs permanent errors)
@@ -147,7 +146,7 @@ tests/
 │       └── SimulatedFailureHttpMessageHandler.cs # NEW: Mock HTTP failures for testing
 ```
 
-**Structure Decision**: Single library project (existing structure). New `Resilience/` namespace isolates policy configuration logic. DI extensions follow .NET convention (Extensions/ namespace). Tests organized by unit (policy logic) vs integration (end-to-end behavior).
+**Structure Decision**: Single library project (existing structure). New `Resilience/` namespace isolates policy configuration logic. DI extensions follow .NET convention (Extensions/ namespace). Tests organized by unit (resilience logic) vs integration (end-to-end behavior).
 
 ## Complexity Tracking
 

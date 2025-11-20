@@ -2,11 +2,11 @@
 
 **Feature**: 002-httpclient-factory-polly
 **Date**: 2025-11-19
-**Purpose**: Determine best practices for integrating IHttpClientFactory with Polly v8 resilience policies
+**Purpose**: Determine best practices for integrating IHttpClientFactory with Microsoft.Extensions.Http.Resilience (https://learn.microsoft.com/en-us/dotnet/core/resilience/?tabs=dotnet-cli) policies
 
 ## Research Questions
 
-1. How to configure Polly v8 resilience policies with IHttpClientFactory?
+1. How to configure Microsoft.Extensions.Http.Resilience (https://learn.microsoft.com/en-us/dotnet/core/resilience/?tabs=dotnet-cli) policies with IHttpClientFactory?
 2. What is the recommended pattern for jittered exponential backoff?
 3. How to implement circuit breaker with proper state tracking per named client?
 4. How to handle graceful shutdown with in-flight requests?
