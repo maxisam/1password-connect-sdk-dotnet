@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash($null)"
+      "Bash($null)",
+      "Bash(Select-String -Pattern \"Passed|Failed|Total\" -Context 0,1)"
     ],
     "deny": [],
     "ask": []
