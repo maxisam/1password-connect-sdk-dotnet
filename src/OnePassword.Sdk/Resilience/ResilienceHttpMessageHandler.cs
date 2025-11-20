@@ -19,13 +19,19 @@ public class ResilienceHttpMessageHandler : DelegatingHandler
     /// Initializes a new instance of the ResilienceHttpMessageHandler.
     /// </summary>
     /// <param name="pipeline">The configured resilience pipeline to apply.</param>
-    /// <param name="innerHandler">The inner handler to delegate actual HTTP requests to.</param>
+    /// <param name="innerHandler">The inner handler to delegate actual HTTP requests to. If null, IHttpClientFactory will set it.</param>
     public ResilienceHttpMessageHandler(
         ResiliencePipeline<HttpResponseMessage> pipeline,
         HttpMessageHandler? innerHandler = null)
     {
         _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
-        InnerHandler = innerHandler ?? new HttpClientHandler();
+
+        // Only set InnerHandler if provided (manual creation scenario)
+        // For IHttpClientFactory, leave it null - factory will set it
+        if (innerHandler != null)
+        {
+            InnerHandler = innerHandler;
+        }
     }
 
     /// <inheritdoc />
