@@ -20,7 +20,9 @@
       "Bash(dotnet run:*)",
       "Bash(timeout /t 2)",
       "Bash(nul)",
-      "Bash(Select-String -Pattern \"error|succeeded|failed\" -Context 2)"
+      "Bash(Select-String -Pattern \"error|succeeded|failed\" -Context 2)",
+      "Bash(Select-String -Pattern 'refs/heads/[0-9]+-httpclient-factory-polly$')",
+      "Bash(Select-String -Pattern '^[* ]*[0-9]+-httpclient-factory-polly$')"
     ],
     "deny": [],
     "ask": []
