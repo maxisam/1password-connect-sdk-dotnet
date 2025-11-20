@@ -13,7 +13,10 @@
       "Bash(dotnet test:*)",
       "Bash(Select-String -Pattern \"error|succeeded|failed\")",
       "Bash(Select-Object -Last 5)",
-      "Bash(Select-String -Pattern \"error|failed|FAIL\" -Context 2)"
+      "Bash(Select-String -Pattern \"error|failed|FAIL\" -Context 2)",
+      "Bash(Select-String -Pattern \"CS1591|warning\")",
+      "Bash(Select-Object -First 30)",
+      "Bash(dotnet tool install:*)"
     ],
     "deny": [],
     "ask": []

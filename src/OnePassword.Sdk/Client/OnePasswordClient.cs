@@ -47,6 +47,13 @@ public class OnePasswordClient : IOnePasswordClient
 
     #region Vault Operations
 
+    /// <summary>
+    /// Lists all vaults accessible with the configured access token.
+    /// </summary>
+    /// <param name="cancellationToken">Token to cancel the operation</param>
+    /// <returns>Collection of accessible vaults</returns>
+    /// <exception cref="AuthenticationException">Thrown when authentication fails</exception>
+    /// <exception cref="NetworkException">Thrown when network request fails after retries</exception>
     public async Task<IEnumerable<Vault>> ListVaultsAsync(CancellationToken cancellationToken = default)
     {
         var response = await SendRequestAsync<Vault[]>(
@@ -58,6 +65,17 @@ public class OnePasswordClient : IOnePasswordClient
         return response;
     }
 
+    /// <summary>
+    /// Retrieves a specific vault by its ID.
+    /// </summary>
+    /// <param name="vaultId">The UUID of the vault to retrieve</param>
+    /// <param name="cancellationToken">Token to cancel the operation</param>
+    /// <returns>The requested vault</returns>
+    /// <exception cref="ArgumentException">Thrown when vaultId is null or whitespace</exception>
+    /// <exception cref="VaultNotFoundException">Thrown when the vault does not exist</exception>
+    /// <exception cref="AccessDeniedException">Thrown when access to the vault is denied</exception>
+    /// <exception cref="AuthenticationException">Thrown when authentication fails</exception>
+    /// <exception cref="NetworkException">Thrown when network request fails after retries</exception>
     public async Task<Vault> GetVaultAsync(string vaultId, CancellationToken cancellationToken = default)
     {
         ThrowIfNullOrWhiteSpace(vaultId, nameof(vaultId));
@@ -81,6 +99,16 @@ public class OnePasswordClient : IOnePasswordClient
         }
     }
 
+    /// <summary>
+    /// Retrieves a vault by its title/name.
+    /// </summary>
+    /// <param name="title">The name of the vault to retrieve</param>
+    /// <param name="cancellationToken">Token to cancel the operation</param>
+    /// <returns>The requested vault</returns>
+    /// <exception cref="ArgumentException">Thrown when title is null or whitespace</exception>
+    /// <exception cref="VaultNotFoundException">Thrown when no vault with the specified title exists</exception>
+    /// <exception cref="AuthenticationException">Thrown when authentication fails</exception>
+    /// <exception cref="NetworkException">Thrown when network request fails after retries</exception>
     public async Task<Vault> GetVaultByTitleAsync(string title, CancellationToken cancellationToken = default)
     {
         ThrowIfNullOrWhiteSpace(title, nameof(title));
@@ -100,6 +128,17 @@ public class OnePasswordClient : IOnePasswordClient
 
     #region Item Operations
 
+    /// <summary>
+    /// Lists all items in a specific vault.
+    /// </summary>
+    /// <param name="vaultId">The UUID of the vault containing the items</param>
+    /// <param name="cancellationToken">Token to cancel the operation</param>
+    /// <returns>Collection of items in the vault</returns>
+    /// <exception cref="ArgumentException">Thrown when vaultId is null or whitespace</exception>
+    /// <exception cref="VaultNotFoundException">Thrown when the vault does not exist</exception>
+    /// <exception cref="AccessDeniedException">Thrown when access to the vault is denied</exception>
+    /// <exception cref="AuthenticationException">Thrown when authentication fails</exception>
+    /// <exception cref="NetworkException">Thrown when network request fails after retries</exception>
     public async Task<IEnumerable<Item>> ListItemsAsync(string vaultId, CancellationToken cancellationToken = default)
     {
         ThrowIfNullOrWhiteSpace(vaultId, nameof(vaultId));
@@ -124,6 +163,19 @@ public class OnePasswordClient : IOnePasswordClient
         }
     }
 
+    /// <summary>
+    /// Retrieves a specific item from a vault by its ID, including all fields and secret values.
+    /// </summary>
+    /// <param name="vaultId">The UUID of the vault containing the item</param>
+    /// <param name="itemId">The UUID of the item to retrieve</param>
+    /// <param name="cancellationToken">Token to cancel the operation</param>
+    /// <returns>The requested item with all fields</returns>
+    /// <exception cref="ArgumentException">Thrown when vaultId or itemId is null or whitespace</exception>
+    /// <exception cref="ItemNotFoundException">Thrown when the item does not exist</exception>
+    /// <exception cref="AccessDeniedException">Thrown when access to the item is denied</exception>
+    /// <exception cref="SecretSizeExceededException">Thrown when a field value exceeds 1MB</exception>
+    /// <exception cref="AuthenticationException">Thrown when authentication fails</exception>
+    /// <exception cref="NetworkException">Thrown when network request fails after retries</exception>
     public async Task<Item> GetItemAsync(string vaultId, string itemId, CancellationToken cancellationToken = default)
     {
         ThrowIfNullOrWhiteSpace(vaultId, nameof(vaultId));
@@ -151,6 +203,18 @@ public class OnePasswordClient : IOnePasswordClient
         }
     }
 
+    /// <summary>
+    /// Retrieves an item from a vault by its title, including all fields and secret values.
+    /// </summary>
+    /// <param name="vaultId">The UUID of the vault containing the item</param>
+    /// <param name="title">The title of the item to retrieve</param>
+    /// <param name="cancellationToken">Token to cancel the operation</param>
+    /// <returns>The requested item with all fields</returns>
+    /// <exception cref="ArgumentException">Thrown when vaultId or title is null or whitespace</exception>
+    /// <exception cref="ItemNotFoundException">Thrown when no item with the specified title exists</exception>
+    /// <exception cref="SecretSizeExceededException">Thrown when a field value exceeds 1MB</exception>
+    /// <exception cref="AuthenticationException">Thrown when authentication fails</exception>
+    /// <exception cref="NetworkException">Thrown when network request fails after retries</exception>
     public async Task<Item> GetItemByTitleAsync(string vaultId, string title, CancellationToken cancellationToken = default)
     {
         ThrowIfNullOrWhiteSpace(vaultId, nameof(vaultId));
@@ -172,6 +236,19 @@ public class OnePasswordClient : IOnePasswordClient
 
     #region Secret Field Operations
 
+    /// <summary>
+    /// Retrieves a specific secret value from an item's field.
+    /// </summary>
+    /// <param name="vaultId">The UUID of the vault containing the item</param>
+    /// <param name="itemId">The UUID of the item containing the field</param>
+    /// <param name="fieldLabel">The label of the field to retrieve</param>
+    /// <param name="cancellationToken">Token to cancel the operation</param>
+    /// <returns>The secret value from the specified field</returns>
+    /// <exception cref="ArgumentException">Thrown when any parameter is null or whitespace</exception>
+    /// <exception cref="FieldNotFoundException">Thrown when the field does not exist in the item</exception>
+    /// <exception cref="ItemNotFoundException">Thrown when the item does not exist</exception>
+    /// <exception cref="AuthenticationException">Thrown when authentication fails</exception>
+    /// <exception cref="NetworkException">Thrown when network request fails after retries</exception>
     public async Task<string> GetSecretAsync(string vaultId, string itemId, string fieldLabel, CancellationToken cancellationToken = default)
     {
         ThrowIfNullOrWhiteSpace(vaultId, nameof(vaultId));
@@ -196,6 +273,26 @@ public class OnePasswordClient : IOnePasswordClient
 
     #region Batch Operations
 
+    /// <summary>
+    /// Retrieves multiple secrets in a single batch operation using op:// URI references.
+    /// </summary>
+    /// <param name="references">Collection of op:// URIs (e.g., "op://vault/item/field")</param>
+    /// <param name="cancellationToken">Token to cancel the operation</param>
+    /// <returns>Dictionary mapping each URI to its resolved secret value</returns>
+    /// <exception cref="ArgumentNullException">Thrown when references is null</exception>
+    /// <exception cref="ArgumentException">Thrown when references collection is empty</exception>
+    /// <exception cref="BatchSizeExceededException">Thrown when more than 100 references are provided</exception>
+    /// <exception cref="MalformedUriException">Thrown when any URI is not a valid op:// format</exception>
+    /// <exception cref="VaultNotFoundException">Thrown when a referenced vault does not exist</exception>
+    /// <exception cref="ItemNotFoundException">Thrown when a referenced item does not exist</exception>
+    /// <exception cref="FieldNotFoundException">Thrown when a referenced field does not exist</exception>
+    /// <exception cref="BatchTimeoutException">Thrown when batch operation exceeds 10 seconds</exception>
+    /// <exception cref="AuthenticationException">Thrown when authentication fails</exception>
+    /// <exception cref="NetworkException">Thrown when network request fails after retries</exception>
+    /// <remarks>
+    /// This method optimizes API calls by fetching each unique vault+item combination only once.
+    /// Duplicate URIs are automatically deduplicated. Maximum batch size is 100 URIs with a 10-second timeout.
+    /// </remarks>
     public async Task<IDictionary<string, string>> GetSecretsAsync(
         IEnumerable<string> references,
         CancellationToken cancellationToken = default)
@@ -243,10 +340,41 @@ public class OnePasswordClient : IOnePasswordClient
 
         try
         {
+            // First, resolve all vault names to vault UUIDs
+            var vaultNameToId = new Dictionary<string, string>();
+            var uniqueVaultNames = itemGroups.Select(g => g.Key.vault).Distinct().ToList();
+
+            foreach (var vaultName in uniqueVaultNames)
+            {
+                // Try to use as UUID first (if it's already a UUID)
+                // Otherwise, look up by name
+                if (IsUuid(vaultName))
+                {
+                    vaultNameToId[vaultName] = vaultName;
+                }
+                else
+                {
+                    var vault = await GetVaultByTitleAsync(vaultName, cancellationToken);
+                    vaultNameToId[vaultName] = vault.Id;
+                }
+            }
+
             // Fetch all items in parallel (within timeout)
             var fetchTasks = itemGroups.Select(async group =>
             {
-                var item = await GetItemByTitleAsync(group.Key.vault, group.Key.item, cancellationToken);
+                var vaultId = vaultNameToId[group.Key.vault];
+
+                // Try to get item - could be UUID or title
+                Item item;
+                if (IsUuid(group.Key.item))
+                {
+                    item = await GetItemAsync(vaultId, group.Key.item, cancellationToken);
+                }
+                else
+                {
+                    item = await GetItemByTitleAsync(vaultId, group.Key.item, cancellationToken);
+                }
+
                 return (group, item);
             });
 
@@ -291,6 +419,13 @@ public class OnePasswordClient : IOnePasswordClient
 
     #region IDisposable
 
+    /// <summary>
+    /// Releases all resources used by the OnePasswordClient.
+    /// </summary>
+    /// <remarks>
+    /// Disposes the underlying HttpClient and logs the disposal event.
+    /// After calling Dispose, the client instance should not be used.
+    /// </remarks>
     public void Dispose()
     {
         if (_disposed)
@@ -406,6 +541,13 @@ public class OnePasswordClient : IOnePasswordClient
         {
             throw new ArgumentException($"Value cannot be null or whitespace.", paramName);
         }
+    }
+
+    private static bool IsUuid(string value)
+    {
+        // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (26 chars with hyphens)
+        // 1Password also uses compact UUIDs without hyphens (26 chars)
+        return Guid.TryParse(value, out _);
     }
 
     private static void ValidateSecretSizes(Item item, string vaultId, string itemId)

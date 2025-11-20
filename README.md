@@ -169,7 +169,52 @@ dotnet test tests/OnePassword.Sdk.Tests
    - 48 SDK unit tests
    - 21 Configuration provider tests
    - Integration tests (coming soon)
+
+Code Coverage: 60.1% line coverage
+   - Target: >80% for core logic
 ```
+
+Generate coverage reports:
+
+```bash
+# Windows (PowerShell)
+.\coverage.ps1
+
+# Unix/Linux/macOS
+chmod +x coverage.sh
+./coverage.sh
+```
+
+This generates an HTML report at `TestResults/CoverageReport/index.html` showing detailed coverage metrics for all source files.
+
+## Examples
+
+Three complete example projects demonstrate different integration patterns:
+
+### 1. ProgrammaticAccess
+Direct SDK usage for fetching secrets programmatically:
+```bash
+cd examples/ProgrammaticAccess
+dotnet run
+```
+[View Example](examples/ProgrammaticAccess)
+
+### 2. ConfigurationIntegration
+Console application with automatic op:// URI resolution from appsettings.json:
+```bash
+cd examples/ConfigurationIntegration
+dotnet run
+```
+[View Example](examples/ConfigurationIntegration)
+
+### 3. AspNetCoreIntegration
+ASP.NET Core Web API with 1Password secrets for database connections and external services:
+```bash
+cd examples/AspNetCoreIntegration
+dotnet run
+# Open https://localhost:5001/swagger
+```
+[View Example](examples/AspNetCoreIntegration)
 
 ## Project Structure
 

@@ -4,6 +4,7 @@
 using OnePassword.Sdk;
 using OnePassword.Sdk.Client;
 using OnePassword.Sdk.Exceptions;
+using OnePassword.Sdk.Models;
 
 Console.WriteLine("1Password .NET SDK - Programmatic Access Example");
 Console.WriteLine("=================================================\n");
@@ -41,7 +42,7 @@ try
 
     foreach (var vault in vaults)
     {
-        Console.WriteLine($"  - {vault.Title} (ID: {vault.Id})");
+        Console.WriteLine($"  - {vault.Name} (ID: {vault.Id})");
     }
     Console.WriteLine();
 
@@ -49,16 +50,16 @@ try
     var firstVault = vaults.FirstOrDefault();
     if (firstVault != null)
     {
-        Console.WriteLine($"Example 2: Getting vault '{firstVault.Title}' by ID");
+        Console.WriteLine($"Example 2: Getting vault '{firstVault.Name}' by ID");
         Console.WriteLine("------------------------------");
         var vault = await client.GetVaultAsync(firstVault.Id);
-        Console.WriteLine($"  Vault: {vault.Title}");
+        Console.WriteLine($"  Vault: {vault.Name}");
         Console.WriteLine($"  ID: {vault.Id}");
         Console.WriteLine($"  Description: {vault.Description ?? "(none)"}");
         Console.WriteLine();
 
         // Example 3: List items in the vault
-        Console.WriteLine($"Example 3: Listing items in vault '{vault.Title}'");
+        Console.WriteLine($"Example 3: Listing items in vault '{vault.Name}'");
         Console.WriteLine("------------------------------");
         var items = await client.ListItemsAsync(vault.Id);
 
@@ -92,7 +93,7 @@ try
                 Console.WriteLine($"    - {field.Label ?? field.Id}: {field.Type}");
 
                 // To get the actual value (for non-sensitive demo):
-                if (field.Type != Models.FieldType.CONCEALED)
+                if (field.Type != FieldType.CONCEALED)
                 {
                     Console.WriteLine($"      Value: {field.Value ?? "(empty)"}");
                 }
@@ -104,7 +105,7 @@ try
             Console.WriteLine();
 
             // Example 5: Get a specific secret value
-            var passwordField = item.Fields.FirstOrDefault(f => f.Type == Models.FieldType.CONCEALED);
+            var passwordField = item.Fields.FirstOrDefault(f => f.Type == FieldType.CONCEALED);
             if (passwordField != null)
             {
                 Console.WriteLine($"Example 5: Retrieving a secret field");
@@ -124,7 +125,7 @@ try
         // Construct op:// URIs for the first few items
         var references = items.Take(3)
             .SelectMany(item => item.Fields.Take(1)
-                .Select(field => $"op://{vault.Title}/{item.Title}/{field.Label ?? field.Id}"))
+                .Select(field => $"op://{vault.Name}/{item.Title}/{field.Label ?? field.Id}"))
             .ToList();
 
         if (references.Any())

@@ -17,7 +17,7 @@ namespace OnePassword.Configuration;
 /// var configuration = new ConfigurationBuilder()
 ///     .AddJsonFile("appsettings.json")
 ///     .AddEnvironmentVariables()
-///     .AddOnePassword()  // <-- Adds 1Password provider
+///     .AddOnePassword()  // Adds 1Password provider
 ///     .Build();
 /// </code>
 ///
