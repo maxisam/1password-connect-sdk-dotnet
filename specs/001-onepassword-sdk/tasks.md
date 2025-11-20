@@ -59,13 +59,13 @@ Tasks marked with `[P]` can be executed in parallel when their prerequisites are
 
 - [ ] T002 [P] Create OnePassword.Sdk class library project
   - Run: `dotnet new classlib -n OnePassword.Sdk -f net8.0 -o src/OnePassword.Sdk`
-  - Target frameworks: net8.0;net6.0 (multi-targeting)
+  - Target frameworks: net8.0
   - Add to solution: `dotnet sln add src/OnePassword.Sdk`
   - **Files**: `src/OnePassword.Sdk/OnePassword.Sdk.csproj`
 
 - [ ] T003 [P] Create OnePassword.Configuration class library project
   - Run: `dotnet new classlib -n OnePassword.Configuration -f net8.0 -o src/OnePassword.Configuration`
-  - Target frameworks: net8.0;net6.0
+  - Target frameworks: net8.0
   - Add to solution: `dotnet sln add src/OnePassword.Configuration`
   - **Files**: `src/OnePassword.Configuration/OnePassword.Configuration.csproj`
 

@@ -11,7 +11,7 @@ Refactor the OnePassword SDK's HttpClient instantiation to use IHttpClientFactor
 
 ## Technical Context
 
-**Language/Version**: C# / .NET 8.0 (multi-target: net8.0, net6.0)
+**Language/Version**: C# / .NET 8.0 (multi-target: net8.0)
 **Primary Dependencies**:
 - Microsoft.Extensions.Http (IHttpClientFactory)
 - Polly 8.4.2 (already in csproj)
