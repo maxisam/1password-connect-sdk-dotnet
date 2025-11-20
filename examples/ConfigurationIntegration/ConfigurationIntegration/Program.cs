@@ -15,6 +15,7 @@ Console.WriteLine("-----------------------------------------------------");
 var configuration = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+    .AddJsonFile("appsettings.Development.json", optional: true, reloadOnChange: false)
     // Add environment variables first so they can supply credentials to the 1Password provider
     .AddEnvironmentVariables()
     // Add user-secrets so local secrets (e.g. connect URL / token) are available when AddOnePassword runs
