@@ -1,6 +1,7 @@
 // Example: Configuration Integration with 1Password
 // Demonstrates automatic op:// URI resolution in appsettings.json
 
+using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using OnePassword.Configuration;
 
@@ -14,8 +15,14 @@ Console.WriteLine("-----------------------------------------------------");
 var configuration = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
-    .AddEnvironmentVariables()  // Environment variables can override secrets
-    .AddOnePassword()            // ⭐ Automatically resolves op:// URIs
+    // Add environment variables first so they can supply credentials to the 1Password provider
+    .AddEnvironmentVariables()
+    // Add user-secrets so local secrets (e.g. connect URL / token) are available when AddOnePassword runs
+    .AddUserSecrets(Assembly.GetEntryAssembly()!)
+    // Add the 1Password provider which will resolve op:// URIs using credentials from above
+    .AddOnePassword()
+    // Re-add environment variables so they take precedence over values resolved from 1Password
+    .AddEnvironmentVariables()
     .Build();
 
 Console.WriteLine("✅ Configuration built successfully!\n");
