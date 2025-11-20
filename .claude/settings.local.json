@@ -16,7 +16,11 @@
       "Bash(Select-String -Pattern \"error|failed|FAIL\" -Context 2)",
       "Bash(Select-String -Pattern \"CS1591|warning\")",
       "Bash(Select-Object -First 30)",
-      "Bash(dotnet tool install:*)"
+      "Bash(dotnet tool install:*)",
+      "Bash(dotnet run:*)",
+      "Bash(timeout /t 2)",
+      "Bash(nul)",
+      "Bash(Select-String -Pattern \"error|succeeded|failed\" -Context 2)"
     ],
     "deny": [],
     "ask": []
