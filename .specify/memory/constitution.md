@@ -61,8 +61,10 @@ Every feature MUST be built as a reusable library component with clear separatio
 The library MUST be independently usable, testable, and documented without external dependencies
 where possible.
 
+The library MUST follow the official 1Password SDK documentation for python where applicable from https://developer.1password.com/docs/sdks.
+
 **Requirements**:
-- MUST design APIs that are framework-agnostic and can be consumed by any .NET application
+- MUST design APIs that are framework-agnostic and can be consumed by any .NET core application
 - MUST provide clear interfaces and abstractions for core functionality
 - MUST minimize external dependencies; justify each dependency addition
 - MUST ensure library components are independently testable without infrastructure dependencies
@@ -77,8 +79,7 @@ and flexibility while maintaining clear boundaries and testability.
 ### III. API Simplicity & Developer Experience
 
 Public APIs MUST be intuitive, well-documented, and follow .NET conventions. Complexity MUST
-be hidden behind simple, composable interfaces. The library should feel natural to .NET
-developers.
+be hidden behind simple, composable interfaces. The library should feel natural to .NET developers. They should be similar to the official 1Password SDK for python.
 
 **Requirements**:
 - MUST follow .NET naming conventions and design guidelines
