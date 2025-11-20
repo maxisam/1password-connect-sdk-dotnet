@@ -46,6 +46,33 @@ public class OnePasswordClient : IOnePasswordClient
             _options.ConnectServer, CorrelationContext.GetCorrelationId());
     }
 
+    /// <summary>
+    /// Internal constructor for testing purposes - allows injection of custom HttpMessageHandler.
+    /// </summary>
+    /// <param name="options">Client configuration options</param>
+    /// <param name="handler">Custom HttpMessageHandler for testing (e.g., SimulatedFailureHttpMessageHandler)</param>
+    /// <param name="logger">Optional logger instance</param>
+    internal OnePasswordClient(
+        OnePasswordClientOptions options,
+        HttpMessageHandler handler,
+        ILogger<OnePasswordClient>? logger = null)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(handler);
+
+        _options = options;
+        // Skip HTTPS validation for test scenarios
+        // _options.Validate();
+
+        _logger = logger ?? NullLogger<OnePasswordClient>.Instance;
+
+        // Create HTTP client with test handler and resilience pipeline
+        _httpClient = CreateHttpClientWithHandler(handler);
+
+        _logger.LogInformation("OnePasswordClient initialized for testing with server {ConnectServer} [CorrelationId: {CorrelationId}]",
+            _options.ConnectServer, CorrelationContext.GetCorrelationId());
+    }
+
     #region Vault Operations
 
     /// <summary>
@@ -494,6 +521,34 @@ public class OnePasswordClient : IOnePasswordClient
 
         _logger.LogDebug("HttpClient created with resilience pipeline: {MaxRetries} retries, {CircuitBreakerThreshold} circuit threshold",
             _options.MaxRetries, _options.CircuitBreakerFailureThreshold);
+
+        return client;
+    }
+
+    /// <summary>
+    /// Creates an HttpClient with a custom handler (for testing) wrapped with resilience pipeline.
+    /// </summary>
+    /// <param name="handler">The base handler to wrap with resilience</param>
+    /// <returns>Configured HttpClient instance</returns>
+    private HttpClient CreateHttpClientWithHandler(HttpMessageHandler handler)
+    {
+        // Build the resilience pipeline (timeout → retry → circuit breaker)
+        var pipeline = ResiliencePolicyBuilder.BuildResiliencePipeline(_options);
+
+        // Wrap the test handler with resilience handler
+        var resilienceHandler = new ResilienceHttpMessageHandler(pipeline, handler);
+
+        // Create HttpClient with resilience-enabled handler
+        var client = new HttpClient(resilienceHandler, disposeHandler: true)
+        {
+            BaseAddress = new Uri(_options.ConnectServer),
+            Timeout = Timeout.InfiniteTimeSpan
+        };
+
+        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_options.Token}");
+        client.DefaultRequestHeaders.Add("Accept", "application/json");
+
+        _logger.LogDebug("HttpClient created for testing with custom handler and resilience pipeline");
 
         return client;
     }

@@ -56,7 +56,7 @@ var options = new OnePasswordClientOptions
     CircuitBreakerSamplingDuration = TimeSpan.FromSeconds(60), // Track failures over 60s window (default: 60s)
 
     // Timeout
-    Timeout = TimeSpan.FromSeconds(60)   // Overall request timeout (default: 30s)
+    Timeout = TimeSpan.FromSeconds(60)   // Overall request timeout (default: 10s)
 };
 
 var client = new OnePasswordClient(options);
@@ -102,9 +102,9 @@ public class SecretService
 Resilience events are automatically logged at appropriate levels:
 
 **Warning Level** (actionable events):
-- Retry attempts: `"Retry attempt {RetryCount} of {MaxRetries} after {Delay}ms"`
-- Circuit breaker opens: `"Circuit breaker opened after {FailureCount} consecutive failures"`
-- Circuit breaker transitions: `"Circuit breaker transitioned to {State} state"`
+- Retry attempts: `"Retry attempt {AttemptNumber} after {Delay}ms due to {StatusCode} response"`
+- Circuit breaker opens: `"Circuit breaker opened. Break duration: {BreakDuration}s"`
+- Circuit breaker transitions: `"Circuit breaker closed. Normal operation resumed"` / `"Circuit breaker half-open. Testing with probe request"`
 
 **Information Level** (operational visibility):
 - Successful operations: `"Listed {Count} vaults successfully"`

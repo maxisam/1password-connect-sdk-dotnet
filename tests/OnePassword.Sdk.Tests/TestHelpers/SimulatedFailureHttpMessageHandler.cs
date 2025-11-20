@@ -29,7 +29,16 @@ public class SimulatedFailureHttpMessageHandler : HttpMessageHandler
     /// <returns>This handler instance for fluent chaining.</returns>
     public SimulatedFailureHttpMessageHandler RespondWith(HttpStatusCode statusCode)
     {
-        _responses.Enqueue(_ => Task.FromResult(new HttpResponseMessage(statusCode)));
+        _responses.Enqueue(_ =>
+        {
+            var response = new HttpResponseMessage(statusCode);
+            // Add empty JSON array for successful responses (needed for deserialization)
+            if (statusCode == HttpStatusCode.OK)
+            {
+                response.Content = new StringContent("[]", System.Text.Encoding.UTF8, "application/json");
+            }
+            return Task.FromResult(response);
+        });
         return this;
     }
 
@@ -77,7 +86,13 @@ public class SimulatedFailureHttpMessageHandler : HttpMessageHandler
         _responses.Enqueue(async _ =>
         {
             await Task.Delay(delay);
-            return new HttpResponseMessage(statusCode);
+            var response = new HttpResponseMessage(statusCode);
+            // Add empty JSON array for successful responses (needed for deserialization)
+            if (statusCode == HttpStatusCode.OK)
+            {
+                response.Content = new StringContent("[]", System.Text.Encoding.UTF8, "application/json");
+            }
+            return response;
         });
         return this;
     }
@@ -114,9 +129,10 @@ public class SimulatedFailureHttpMessageHandler : HttpMessageHandler
         }
 
         // Default response if no specific response is configured
+        // Return empty JSON array for list operations (ListVaultsAsync expects Vault[])
         return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = new StringContent("{}")
+            Content = new StringContent("[]", System.Text.Encoding.UTF8, "application/json")
         });
     }
 }
