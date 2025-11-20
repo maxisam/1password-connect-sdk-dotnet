@@ -2,6 +2,7 @@
 // Feature: 001-onepassword-sdk
 
 using System.Text.Json.Serialization;
+using OnePassword.Sdk.Serialization;
 
 namespace OnePassword.Sdk.Models;
 
@@ -54,6 +55,7 @@ public class Field
     /// Gets the optional section ID this field belongs to.
     /// </summary>
     [JsonPropertyName("section")]
+    [JsonConverter(typeof(SectionIdConverter))]
     public string? SectionId { get; init; }
 
     /// <summary>
