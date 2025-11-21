@@ -10,6 +10,8 @@
 
 ✅ **Programmatic secret retrieval** - Direct access to 1Password vaults, items, and fields
 ✅ **Configuration provider** - Automatically resolve `op://` URIs in `appsettings.json`
+✅ **Resilience & reliability** - Automatic retry with exponential backoff and circuit breaker
+✅ **Dependency injection** - First-class support for ASP.NET Core DI containers
 ✅ **Environment variable override** - Local development without production secrets
 ✅ **Batch operations** - Retrieve up to 100 secrets in a single call
 ✅ **Comprehensive logging** - Structured logging with correlation IDs (never logs secrets)
@@ -64,6 +66,38 @@ var configuration = new ConfigurationBuilder()
 
 ### Programmatic Access
 
+**Option 1: Dependency Injection (Recommended for ASP.NET Core)**
+
+```csharp
+using OnePassword.Sdk.Extensions;
+
+// In Program.cs
+builder.Services.AddOnePasswordClient(options =>
+{
+    options.ConnectServer = configuration["OnePassword:ConnectServer"];
+    options.Token = configuration["OnePassword:Token"];
+    options.MaxRetries = 5;  // Customize resilience settings
+});
+
+// Inject into your services
+public class MyService
+{
+    private readonly IOnePasswordClient _client;
+
+    public MyService(IOnePasswordClient client)
+    {
+        _client = client;
+    }
+
+    public async Task<string> GetSecretAsync()
+    {
+        return await _client.GetSecretAsync("vault", "item", "field");
+    }
+}
+```
+
+**Option 2: Manual Instantiation (Backward Compatible)**
+
 ```csharp
 using OnePassword.Sdk;
 
@@ -90,9 +124,57 @@ var secrets = await client.GetSecretsAsync(new[]
 });
 ```
 
+## Resilience & Reliability
+
+The SDK automatically handles transient failures with **Polly v8** resilience policies:
+
+🔄 **Automatic Retry**
+- Exponential backoff with jitter (prevents thundering herd)
+- Configurable retry count (default: 3)
+- Only retries transient errors (503, timeouts, network issues)
+- Never retries permanent errors (401, 403, 404)
+
+⚡ **Circuit Breaker**
+- Fails fast when API is consistently down
+- Prevents cascading failures
+- Automatic recovery testing
+- Configurable thresholds
+
+⏱️ **Timeout Management**
+- Per-request timeouts (default: 10s)
+- Timeout budget tracking across retries
+- Graceful shutdown with in-flight request handling
+
+📊 **Observability**
+- Structured logging for all resilience events
+- Warning-level logs for retry attempts and circuit state changes
+- Never logs secrets or sensitive data
+- Integration-ready for Application Insights, DataDog, etc.
+
+**Configuration Example:**
+```csharp
+services.AddOnePasswordClient(options =>
+{
+    options.ConnectServer = "https://connect.example.com";
+    options.Token = "your-token";
+
+    // Retry configuration
+    options.MaxRetries = 5;
+    options.RetryBaseDelay = TimeSpan.FromMilliseconds(500);
+    options.RetryMaxDelay = TimeSpan.FromSeconds(30);
+
+    // Circuit breaker configuration
+    options.CircuitBreakerFailureThreshold = 3;
+    options.CircuitBreakerBreakDuration = TimeSpan.FromSeconds(20);
+});
+```
+
+See **[Resilience Guide](specs/002-httpclient-factory-polly/quickstart.md)** for detailed configuration options.
+
 ## Documentation
 
 - **[Quickstart Guide](specs/001-onepassword-sdk/quickstart.md)** - Complete walkthrough with examples
+- **[Resilience Guide](specs/002-httpclient-factory-polly/quickstart.md)** - Retry, circuit breaker, and DI configuration
 - **[API Reference](specs/001-onepassword-sdk/contracts/README.md)** - Detailed API documentation
 - **[Configuration Guide](specs/001-onepassword-sdk/quickstart.md#use-case-2-configuration-integration-recommended)** - How to use the configuration provider
 - **[Environment Override](specs/001-onepassword-sdk/quickstart.md#step-4-override-secrets-with-environment-variables)** - Local development best practices
@@ -165,13 +247,15 @@ dotnet test tests/OnePassword.Sdk.Tests
 ### Test Coverage
 
 ```
-✅ 69 passing tests
-   - 48 SDK unit tests
+✅ 117+ passing tests
+   - 71 SDK unit tests (including resilience policies)
    - 21 Configuration provider tests
-   - Integration tests (coming soon)
+   - 25 Integration tests (DI, backward compatibility, resilience)
+   - 7 tests skipped (WireMock placeholders)
 
-Code Coverage: 60.1% line coverage
+Code Coverage: ~75% line coverage
    - Target: >80% for core logic
+   - Resilience features fully tested
 ```
 
 Generate coverage reports:

@@ -44,10 +44,68 @@ public class OnePasswordClientOptions
     /// Gets or sets the maximum number of retry attempts for transient failures.
     /// </summary>
     /// <remarks>
-    /// Default: 3 retries with exponential backoff (FR-033).
+    /// Default: 3 retries with exponential backoff (FR-033, FR-008).
     /// Must be greater than or equal to 0.
     /// </remarks>
     public int MaxRetries { get; set; } = 3;
+
+    /// <summary>
+    /// Gets or sets the base delay for exponential backoff retry policy.
+    /// </summary>
+    /// <remarks>
+    /// Default: 1 second (FR-003, FR-015).
+    /// Used as the starting delay; actual delays increase exponentially with jitter.
+    /// Must be greater than zero.
+    /// </remarks>
+    public TimeSpan RetryBaseDelay { get; set; } = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// Gets or sets the maximum delay cap for exponential backoff.
+    /// </summary>
+    /// <remarks>
+    /// Default: 30 seconds.
+    /// Prevents excessive wait times during high retry counts.
+    /// Must be greater than or equal to RetryBaseDelay.
+    /// </remarks>
+    public TimeSpan RetryMaxDelay { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Gets or sets whether to enable jittered exponential backoff.
+    /// </summary>
+    /// <remarks>
+    /// Default: true (FR-015).
+    /// Jitter adds randomness to prevent thundering herd scenarios.
+    /// </remarks>
+    public bool EnableJitter { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the consecutive failure threshold before circuit breaker opens.
+    /// </summary>
+    /// <remarks>
+    /// Default: 5 consecutive failures (FR-014).
+    /// Must be at least 1.
+    /// </remarks>
+    public int CircuitBreakerFailureThreshold { get; set; } = 5;
+
+    /// <summary>
+    /// Gets or sets how long the circuit breaker stays open.
+    /// </summary>
+    /// <remarks>
+    /// Default: 30 seconds (FR-014).
+    /// After this duration, circuit transitions to half-open to test recovery.
+    /// Must be greater than zero.
+    /// </remarks>
+    public TimeSpan CircuitBreakerBreakDuration { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Gets or sets the window for tracking failure ratio.
+    /// </summary>
+    /// <remarks>
+    /// Default: 60 seconds (FR-014).
+    /// Circuit breaker tracks failures within this time window.
+    /// Must be greater than zero.
+    /// </remarks>
+    public TimeSpan CircuitBreakerSamplingDuration { get; set; } = TimeSpan.FromSeconds(60);
 
     /// <summary>
     /// Gets or sets the logger instance for structured logging (optional).
@@ -88,6 +146,31 @@ public class OnePasswordClientOptions
         if (MaxRetries < 0)
         {
             throw new ArgumentException("MaxRetries must be greater than or equal to zero.", nameof(MaxRetries));
+        }
+
+        if (RetryBaseDelay <= TimeSpan.Zero)
+        {
+            throw new ArgumentException("RetryBaseDelay must be greater than zero.", nameof(RetryBaseDelay));
+        }
+
+        if (RetryMaxDelay < RetryBaseDelay)
+        {
+            throw new ArgumentException("RetryMaxDelay must be greater than or equal to RetryBaseDelay.", nameof(RetryMaxDelay));
+        }
+
+        if (CircuitBreakerFailureThreshold < 1)
+        {
+            throw new ArgumentException("CircuitBreakerFailureThreshold must be at least 1.", nameof(CircuitBreakerFailureThreshold));
+        }
+
+        if (CircuitBreakerBreakDuration <= TimeSpan.Zero)
+        {
+            throw new ArgumentException("CircuitBreakerBreakDuration must be greater than zero.", nameof(CircuitBreakerBreakDuration));
+        }
+
+        if (CircuitBreakerSamplingDuration <= TimeSpan.Zero)
+        {
+            throw new ArgumentException("CircuitBreakerSamplingDuration must be greater than zero.", nameof(CircuitBreakerSamplingDuration));
         }
     }
 }
