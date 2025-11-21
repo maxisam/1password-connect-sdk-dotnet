@@ -9,8 +9,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using OnePassword.Sdk.Exceptions;
 using OnePassword.Sdk.Internal;
 using OnePassword.Sdk.Models;
-using Polly;
-using Polly.Extensions.Http;
+using OnePassword.Sdk.Resilience;
 
 namespace OnePassword.Sdk.Client;
 
@@ -22,6 +21,8 @@ public class OnePasswordClient : IOnePasswordClient
     private readonly HttpClient _httpClient;
     private readonly ILogger<OnePasswordClient> _logger;
     private readonly OnePasswordClientOptions _options;
+    private readonly SemaphoreSlim _requestSemaphore = new(int.MaxValue);
+    private int _activeRequests;
     private bool _disposed;
 
     /// <summary>
@@ -42,6 +43,33 @@ public class OnePasswordClient : IOnePasswordClient
         _httpClient = CreateHttpClient();
 
         _logger.LogInformation("OnePasswordClient initialized with server {ConnectServer} [CorrelationId: {CorrelationId}]",
+            _options.ConnectServer, CorrelationContext.GetCorrelationId());
+    }
+
+    /// <summary>
+    /// Internal constructor for testing purposes - allows injection of custom HttpMessageHandler.
+    /// </summary>
+    /// <param name="options">Client configuration options</param>
+    /// <param name="handler">Custom HttpMessageHandler for testing (e.g., SimulatedFailureHttpMessageHandler)</param>
+    /// <param name="logger">Optional logger instance</param>
+    internal OnePasswordClient(
+        OnePasswordClientOptions options,
+        HttpMessageHandler handler,
+        ILogger<OnePasswordClient>? logger = null)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(handler);
+
+        _options = options;
+        // Skip HTTPS validation for test scenarios
+        // _options.Validate();
+
+        _logger = logger ?? NullLogger<OnePasswordClient>.Instance;
+
+        // Create HTTP client with test handler and resilience pipeline
+        _httpClient = CreateHttpClientWithHandler(handler);
+
+        _logger.LogInformation("OnePasswordClient initialized for testing with server {ConnectServer} [CorrelationId: {CorrelationId}]",
             _options.ConnectServer, CorrelationContext.GetCorrelationId());
     }
 
@@ -423,8 +451,9 @@ public class OnePasswordClient : IOnePasswordClient
     /// Releases all resources used by the OnePasswordClient.
     /// </summary>
     /// <remarks>
-    /// Disposes the underlying HttpClient and logs the disposal event.
-    /// After calling Dispose, the client instance should not be used.
+    /// FR-011: Implements graceful shutdown by allowing in-flight requests to complete
+    /// within a grace period (5 seconds), then disposes the underlying HttpClient.
+    /// After calling Dispose, new requests will be rejected with ObjectDisposedException.
     /// </remarks>
     public void Dispose()
     {
@@ -433,9 +462,33 @@ public class OnePasswordClient : IOnePasswordClient
             return;
         }
 
-        _httpClient?.Dispose();
-        _logger.LogInformation("OnePasswordClient disposed");
+        // Mark as disposed to reject new requests
         _disposed = true;
+
+        // FR-011: Wait for in-flight requests to complete (with 5-second grace period)
+        var gracePeriod = TimeSpan.FromSeconds(5);
+        var deadline = DateTime.UtcNow.Add(gracePeriod);
+
+        while (_activeRequests > 0 && DateTime.UtcNow < deadline)
+        {
+            _logger.LogDebug("Waiting for {ActiveRequests} in-flight requests to complete", _activeRequests);
+            Thread.Sleep(100); // Poll every 100ms
+        }
+
+        if (_activeRequests > 0)
+        {
+            _logger.LogWarning(
+                "Disposing client with {ActiveRequests} in-flight requests still active after {GracePeriod}s grace period",
+                _activeRequests, gracePeriod.TotalSeconds);
+        }
+        else
+        {
+            _logger.LogInformation("All in-flight requests completed before disposal");
+        }
+
+        _httpClient?.Dispose();
+        _requestSemaphore?.Dispose();
+        _logger.LogInformation("OnePasswordClient disposed");
     }
 
     #endregion
@@ -444,16 +497,58 @@ public class OnePasswordClient : IOnePasswordClient
 
     private HttpClient CreateHttpClient()
     {
-        // Note: With Polly v8, retry policy is handled differently
-        // For simplicity, we'll use a basic HttpClient and handle retries in SendRequestAsync
-        var client = new HttpClient
+        // FR-001: Create HttpClient with Polly v8 resilience pipeline
+        // Build the resilience pipeline (timeout → retry → circuit breaker)
+        var pipeline = ResiliencePolicyBuilder.BuildResiliencePipeline(_options);
+
+        // Create the base handler
+        var baseHandler = new HttpClientHandler();
+
+        // Wrap with resilience handler
+        var resilienceHandler = new ResilienceHttpMessageHandler(pipeline, baseHandler);
+
+        // Create HttpClient with resilience-enabled handler
+        var client = new HttpClient(resilienceHandler, disposeHandler: true)
         {
             BaseAddress = new Uri(_options.ConnectServer),
-            Timeout = _options.Timeout
+            // Note: Timeout is now managed by the resilience pipeline's TimeoutStrategy
+            // Set HttpClient.Timeout to Infinite to prevent conflicts
+            Timeout = Timeout.InfiniteTimeSpan
         };
 
         client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_options.Token}");
         client.DefaultRequestHeaders.Add("Accept", "application/json");
+
+        _logger.LogDebug("HttpClient created with resilience pipeline: {MaxRetries} retries, {CircuitBreakerThreshold} circuit threshold",
+            _options.MaxRetries, _options.CircuitBreakerFailureThreshold);
+
+        return client;
+    }
+
+    /// <summary>
+    /// Creates an HttpClient with a custom handler (for testing) wrapped with resilience pipeline.
+    /// </summary>
+    /// <param name="handler">The base handler to wrap with resilience</param>
+    /// <returns>Configured HttpClient instance</returns>
+    private HttpClient CreateHttpClientWithHandler(HttpMessageHandler handler)
+    {
+        // Build the resilience pipeline (timeout → retry → circuit breaker)
+        var pipeline = ResiliencePolicyBuilder.BuildResiliencePipeline(_options);
+
+        // Wrap the test handler with resilience handler
+        var resilienceHandler = new ResilienceHttpMessageHandler(pipeline, handler);
+
+        // Create HttpClient with resilience-enabled handler
+        var client = new HttpClient(resilienceHandler, disposeHandler: true)
+        {
+            BaseAddress = new Uri(_options.ConnectServer),
+            Timeout = Timeout.InfiniteTimeSpan
+        };
+
+        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_options.Token}");
+        client.DefaultRequestHeaders.Add("Accept", "application/json");
+
+        _logger.LogDebug("HttpClient created for testing with custom handler and resilience pipeline");
 
         return client;
     }
@@ -463,76 +558,68 @@ public class OnePasswordClient : IOnePasswordClient
         string path,
         CancellationToken cancellationToken)
     {
-        var retryCount = 0;
-        Exception? lastException = null;
-
-        while (retryCount <= _options.MaxRetries)
+        // FR-011: Reject new requests after disposal
+        if (_disposed)
         {
-            try
-            {
-                var request = new HttpRequestMessage(method, path);
-                var response = await _httpClient.SendAsync(request, cancellationToken);
-
-                if (response.StatusCode == HttpStatusCode.Unauthorized)
-                {
-                    throw new AuthenticationException("Authentication failed: invalid or expired token");
-                }
-
-                response.EnsureSuccessStatusCode();
-
-                var result = await response.Content.ReadFromJsonAsync<T>(cancellationToken: cancellationToken);
-
-                if (result == null)
-                {
-                    throw new OnePasswordException($"Failed to deserialize response from {path}");
-                }
-
-                return result;
-            }
-            catch (HttpRequestException ex) when (IsTransientError(ex) && retryCount < _options.MaxRetries)
-            {
-                lastException = ex;
-                var delay = TimeSpan.FromSeconds(Math.Pow(2, retryCount));
-                retryCount++;
-
-                _logger.LogWarning("Retry attempt {RetryCount} of {MaxRetries} after {Delay}ms",
-                    retryCount, _options.MaxRetries, delay.TotalMilliseconds);
-
-                await Task.Delay(delay, cancellationToken);
-            }
-            catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested && retryCount < _options.MaxRetries)
-            {
-                lastException = ex;
-                var delay = TimeSpan.FromSeconds(Math.Pow(2, retryCount));
-                retryCount++;
-
-                _logger.LogWarning("Retry attempt {RetryCount} of {MaxRetries} after timeout",
-                    retryCount, _options.MaxRetries);
-
-                await Task.Delay(delay, cancellationToken);
-            }
-            catch (AuthenticationException)
-            {
-                throw;
-            }
-            catch (HttpRequestException)
-            {
-                throw;
-            }
+            throw new ObjectDisposedException(nameof(OnePasswordClient), "Cannot send requests after client has been disposed");
         }
 
-        // All retries exhausted
-        _logger.LogError(lastException, "Request failed after {RetryCount} retries [CorrelationId: {CorrelationId}]",
-            retryCount, CorrelationContext.GetCorrelationId());
-        throw new NetworkException("Request failed after retries", lastException!, retryCount);
-    }
+        // Track in-flight request
+        Interlocked.Increment(ref _activeRequests);
+        try
+        {
+            // FR-020: Manual retry logic removed - now handled by resilience pipeline
+            var request = new HttpRequestMessage(method, path);
 
-    private static bool IsTransientError(HttpRequestException ex)
-    {
-        return ex.InnerException is System.Net.Sockets.SocketException ||
-               ex.StatusCode is HttpStatusCode.RequestTimeout or
-                               HttpStatusCode.ServiceUnavailable or
-                               HttpStatusCode.GatewayTimeout;
+            // FR-009: Log request at Debug level
+            _logger.LogDebug("Sending {Method} request to {Path} [CorrelationId: {CorrelationId}]",
+                method, path, CorrelationContext.GetCorrelationId());
+
+            var response = await _httpClient.SendAsync(request, cancellationToken);
+
+            // FR-010: Permanent errors (401, 403, 404) are not retried by the pipeline
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                throw new AuthenticationException("Authentication failed: invalid or expired token");
+            }
+
+            response.EnsureSuccessStatusCode();
+
+            var result = await response.Content.ReadFromJsonAsync<T>(cancellationToken: cancellationToken);
+
+            if (result == null)
+            {
+                throw new OnePasswordException($"Failed to deserialize response from {path}");
+            }
+
+            // FR-009: Log successful request at Information level
+            _logger.LogInformation("Request to {Path} completed successfully [CorrelationId: {CorrelationId}]",
+                path, CorrelationContext.GetCorrelationId());
+
+            return result;
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode != HttpStatusCode.Unauthorized
+            && ex.StatusCode != HttpStatusCode.NotFound
+            && ex.StatusCode != HttpStatusCode.Forbidden)
+        {
+            // Network or HTTP error after all retries exhausted
+            // Note: 404 and 403 are rethrown as-is to allow calling methods to handle them
+            _logger.LogError(ex, "Request to {Path} failed [CorrelationId: {CorrelationId}]",
+                path, CorrelationContext.GetCorrelationId());
+            throw new NetworkException($"Request to {path} failed", ex);
+        }
+        catch (TimeoutException ex)
+        {
+            // FR-017: Timeout exceeded (either per-request or cumulative)
+            _logger.LogError(ex, "Request to {Path} timed out [CorrelationId: {CorrelationId}]",
+                path, CorrelationContext.GetCorrelationId());
+            throw new NetworkException($"Request to {path} timed out", ex);
+        }
+        finally
+        {
+            // Release in-flight request tracking
+            Interlocked.Decrement(ref _activeRequests);
+        }
     }
 
     private static void ThrowIfNullOrWhiteSpace(string? value, string paramName)
