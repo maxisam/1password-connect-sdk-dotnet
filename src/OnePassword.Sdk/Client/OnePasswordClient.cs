@@ -598,9 +598,12 @@ public class OnePasswordClient : IOnePasswordClient
 
             return result;
         }
-        catch (HttpRequestException ex) when (ex.StatusCode != HttpStatusCode.Unauthorized)
+        catch (HttpRequestException ex) when (ex.StatusCode != HttpStatusCode.Unauthorized
+            && ex.StatusCode != HttpStatusCode.NotFound
+            && ex.StatusCode != HttpStatusCode.Forbidden)
         {
             // Network or HTTP error after all retries exhausted
+            // Note: 404 and 403 are rethrown as-is to allow calling methods to handle them
             _logger.LogError(ex, "Request to {Path} failed [CorrelationId: {CorrelationId}]",
                 path, CorrelationContext.GetCorrelationId());
             throw new NetworkException($"Request to {path} failed", ex);
